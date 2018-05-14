@@ -400,7 +400,7 @@ function init() {
                     format: new ol.format.GeoJSON({
                         defaultDataProjection: 'EPSG:4326'
                     }),
-                    url: '../../res/world_capitals.geojson',
+                    url: '../res/world_capitals.geojson',
                     attributions: [
                         new ol.Attribution({
                             html: 'World Capitals © Natural Earth'
