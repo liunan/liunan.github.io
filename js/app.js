@@ -370,7 +370,46 @@ function init() {
         map.addLayer(layer);
         source.addFeatures(evt.features);
     });
-	
+    
+    
+    var mapserverURL = 'http://47.93.17.65';
+
+    var mapURL = mapserverURL + '/maps/gts/tms/v1/{mapName}/tile/{x}/{y}/{z}';
+    mapURL = mapURL.replace('{mapName}', encodeURIComponent('全球影像'));
+
+    function checkTileXY_(ncol, nrow) {
+        var x = (ncol & 0xffffff80) | (nrow & 0x0000007f);
+        var y = (nrow & 0xffffff80) | (ncol & 0x0000007f);
+        return [x, y];
+    };
+
+    /**计算函数 */
+    var f = function(tileCoord, pixelRatio, projection) {
+        if (!tileCoord) {
+            return "";
+        }
+        var z = tileCoord[0] - 0;
+        var ncol = tileCoord[1] - 0;
+        var nrow = 0 - tileCoord[2] - 1;
+        //var nrow = 0 - tileCoord[2];
+        //console.log('ncol=%d, nrow=%d, z=%d', ncol, nrow, z);
+        var xy = checkTileXY_(ncol, nrow);
+    
+        var s = mapURL.replace('{z}', z+'');
+        s = s.replace('{x}', xy[0]+'');
+        s = s.replace('{y}', xy[1]+'');
+        return s;
+    };
+
+
+    var xyzSource = new ol.source.XYZ({
+        /*projection: 'EPGS:3857',*/
+        minZoom: 0,
+        maxZoom: 14,
+        tileUrlFunction: f
+    });
+
+
 	
     var map = new ol.Map({
         target: 'map',
@@ -380,8 +419,8 @@ function init() {
                 source: new ol.source.OSM(),
 				name:'OpenStreetMap'
             }),
-		*/
-			
+		
+			   	
 			new ol.layer.Tile({
 				preload: Infinity,
 				source: new ol.source.BingMaps({
@@ -392,8 +431,9 @@ function init() {
 						// maxZoom: 19
 					}),
 				name: 'Bing'
-			}),
-			
+			}),*/
+     
+            new ol.layer.Tile({source:xyzSource,name:'Gt Img'}),
 			
             new ol.layer.Vector({
                 source: new ol.source.Vector({
@@ -445,6 +485,8 @@ function init() {
                 target: 'coordinates'
             }),
 
+           
+
             /*
             new ol.control.Cesium({
                 target: 'toolbar'
@@ -462,6 +504,12 @@ function init() {
 		])
 		
     });
+
+    
+
+    //var gtLayer = new ol.layer.Tile({'map':map,source:xyzSource});
+
+   
 	var tree = new layerTree({map: map, target: 'layertree', messages:
 			'messageBar'}).createRegistry(map.getLayers().item(0)).createRegistry(map.getLayers().item(1));
 			
