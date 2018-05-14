@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="zh">
+    <head>
+        <meta charset="GBK">
+		<title>GtMap 展示应用</title>
+		<link href="./js/ol.css" rel="stylesheet">		
+		<link rel="stylesheet" href="./js/ol-cesium-v1.37/olcs.css" type="text/css">
+		<link href="./css/app.css" rel="stylesheet">
+        <!--
+        <script type="text/javascript" src="./js/ol.v4.6.5.js"></script>
+		-->
+		<script type="text/javascript" src="./js/ol-cesium-v1.37/Cesium/Cesium.js"></script>
+		<script type="text/javascript" src="./js/ol-cesium-v1.37/olcesium.js"></script>
+		
+		<script type="text/javascript" src="./js/app.js"></script>
+	</head>
+	<body>
+		<div class="map-container">		
+            <div id="toolbar" class="toolbar"></div>
+			<div id="layertree" class="layertree"></div>
+            <div id="map" class="map">
+                <!--<div class="nosupport">您的浏览器版本过低不支持该应用，请升级至最新版的浏览器.</div>-->
+            </div>
+            <div class="notification-bar">
+                <div id="messageBar" class="message-bar"></div>
+                <div id="coordinates"></div>
+            </div>
+        </div>
+		
+		<div id="addvector" class="toggleable" style="display: none;">
+            <form id="addvector_form" class="addlayer">
+                <p>Add Vector layer</p>
+                <table>
+                    <tr>
+                        <td>Vector file:</td>
+                        <td><input name="file" type="file" required="required"></td>
+                    </tr>
+                    <tr>
+                        <td>Display name:</td>
+                        <td><input name="displayname" type="text"></td>
+                    </tr>
+                    <tr>
+                        <td>Format:</td>
+                        <td><select name="format" required="required">
+                            <option value="geojson">GeoJSON</option>
+                            <option value="topojson">TopoJSON</option>
+                            <option value="kml">KML</option>
+                            <option value="osm">OSM</option>
+                        </select></td>
+                    </tr>
+                    <tr>
+                        <td>Projection:</td>
+                        <td><input name="projection" type="text"></td>
+                    </tr>
+                    <tr>
+                        <td><input type="submit" value="Add layer"></td>
+                        <td><input type="button" value="Cancel" onclick="this.form.parentNode.style.display = 'none'"></td>
+                    </tr>
+                </table>
+            </form>
+        </div>
+		
+		
+		
+	</body>
+</html>
+	

@@ -1,1 +1,53 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><title>AngularTourOfHeroes</title><base href="/"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="icon" type="image/x-icon" href="favicon.ico"><link href="styles.2cd7d4bf636d25bf3db5.bundle.css" rel="stylesheet"/></head><body><app-root></app-root><script type="text/javascript" src="inline.318b50c57b4eba3d437b.bundle.js"></script><script type="text/javascript" src="polyfills.b6b2cd0d4c472ac3ac12.bundle.js"></script><script type="text/javascript" src="main.c61d44921937893281e6.bundle.js"></script></body></html>
+<!DOCTYPE html>
+<html lang="zh">
+    <head>
+        <meta charset="GBK">
+		<title>GtMap 展示应用</title>
+		
+		
+		
+		<script type="text/javascript" src="./js/ol-cesium-v1.37/Cesium/Cesium.js"></script>
+		<!--<script type="text/javascript" src="./js/ol-cesium-v1.37/olcesium.js"></script>-->
+		
+		<style>
+		@import url(./js/ol-cesium-v1.37/Cesium/Widgets/widgets.css);
+			html, body, #cesiumContainer {
+			width: 100%; height: 100%; margin: 0; padding: 0; overflow: hidden;
+		}
+	</style>
+	</head>
+	<body>
+		<div id="cesiumContainer" ></div>
+		<div id="loadingOverlay"><h1>Loading...</h1></div>
+		<div id="toolbar"></div>
+		<div id="credit" style="display:none"></div>
+		
+	<script>
+	
+	//Cesium.CreditDisplay.cesiumCredit = new Cesium.Credit('<a href="www.baidu.com" target="_blank"><img src="/images/cesium_logo.png" title="baidu"/></a>');
+	Cesium.CreditDisplay.cesiumCredit = null;
+		var viewer = new Cesium.Viewer('cesiumContainer', {
+							imageryProvider : Cesium.createTileMapServiceImageryProvider({
+								url : './js/ol-cesium-v1.37/Cesium/Assets/Textures/NaturalEarthII'							
+							}),
+							/*帮助*/
+							navigationHelpButton:false,
+							baseLayerPicker : false,
+							geocoder : false,
+							/*时间条*/
+							timeline: false,
+							infoBox:false,
+							/*关闭时间动画*/
+							animation:false,
+							selectionIndicator:false,
+							
+							clockViewModel:null,
+							imageryProviderViewModels:null,
+							dataSources:null,
+							/*creditContainer:'credit'*/
+					});
+					
+					
+	</script>
+	</body>
+</html>
