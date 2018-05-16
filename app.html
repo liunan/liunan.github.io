@@ -63,6 +63,16 @@
                 </table>
             </form>
         </div>
+
+        <div id="itemprops" class="toggleable" style="display:none" >
+            <form id="itemprops_form" class="addlayer">
+                <p>线宽</p><input type="number" name="strokeSize">
+                <p>线条颜色</p><input type="color" name="strokeColor">
+                <p>填充颜色</p><input type="color" name="fillColor">
+                <input type="submit" value="确定">
+                <input type="button" value="取消" onclick="this.form.parentNode.style.display = 'none'">
+            </form>
+        </div>
 		
 		
 		

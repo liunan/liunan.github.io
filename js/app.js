@@ -19,7 +19,9 @@ var layerTree = function (options) {
         // 增加本地图层按钮
 		controlDiv.appendChild(this.createButton('addvector', '本地图层', 'addlayer'));
 		// 删除图层按钮
-		controlDiv.appendChild(this.createButton('deletelayer', 'Remove Layer', 'deletelayer'));
+        controlDiv.appendChild(this.createButton('deletelayer', '删除图层', 'deletelayer'));
+        
+        controlDiv.appendChild(this.createButton('itemprops', '图元属性', 'itemprops'));
 
         containerDiv.appendChild(controlDiv);
         this.layerContainer = document.createElement('div');
@@ -63,17 +65,25 @@ var layerTree = function (options) {
     }
 };
 
+/**
+ * 图层控制器上的功能按钮
+ * @param {按钮id} elemName 
+ * @param {按钮标题} elemTitle 
+ * @param {按钮的类型，实现中用于路由不同的处理方法} elemType 
+ */
 layerTree.prototype.createButton = function (elemName, elemTitle, elemType) {
     var buttonElem = document.createElement('button');
     buttonElem.className = elemName;
     buttonElem.title = elemTitle;
     switch (elemType) {
         case 'addlayer':
+            //增加本地矢量文件图层
             buttonElem.addEventListener('click', function () {
                 document.getElementById(elemName).style.display = 'block';
             });
             return buttonElem;
-		case 'deletelayer':
+        case 'deletelayer':
+            //删除选中的图层
             var _this = this;
             buttonElem.addEventListener('click', function () {
                 if (_this.selectedLayer) {
@@ -85,7 +95,12 @@ layerTree.prototype.createButton = function (elemName, elemTitle, elemType) {
                 }
             });
             return buttonElem;
-			
+        case 'itemprops':
+            var _this = this;
+            buttonElem.addEventListener('click', function () {
+                document.getElementById(elemName).style.display = 'block';
+            });
+            return buttonElem;			
         default:
             return false;
     }
@@ -130,6 +145,7 @@ layerTree.prototype.addVectorLayer = function (form) {
     var sourceFormat;
     var source = new ol.source.Vector();
     fr.onload = function (evt) {
+        //文件读取到的内容
         var vectorData = evt.target.result;
         switch (form.format.value) {
             case 'geojson':
@@ -147,6 +163,7 @@ layerTree.prototype.addVectorLayer = function (form) {
             default:
                 return false;
         }
+        /**按照如下次序获取空间参考：用户界面选定->数据中自描述->当前显示 */
         var dataProjection = form.projection.value || sourceFormat.readProjection(vectorData) || currentProj;
         source.addFeatures(sourceFormat.readFeatures(vectorData, {
             dataProjection: dataProjection,
@@ -165,6 +182,7 @@ layerTree.prototype.addVectorLayer = function (form) {
 };
 
 
+/**选中当前的图层 */
 layerTree.prototype.addSelectEvent = function (node, isChild) {
     var _this = this;
     node.addEventListener('click', function (evt) {
@@ -182,12 +200,13 @@ layerTree.prototype.addSelectEvent = function (node, isChild) {
     return node;
 };
 
+/**删除当前图层的节点 */
 layerTree.prototype.removeRegistry = function (layer) {
     var layerDiv = document.getElementById(layer.get('id'));
     this.layerContainer.removeChild(layerDiv);
     return this;
 };
-
+/**通过图层id获取图层对象 */
 layerTree.prototype.getLayerById = function (id) {
     var layers = this.map.getLayers().getArray();
     for (var i = 0; i < layers.length; i += 1) {
@@ -284,17 +303,22 @@ ol.control.Cesium = function (opt_options) {
     });
 };
 ol.inherits(ol.control.Cesium, ol.control.Control);
-////////////////////////////
 
+////////////////////////////
+//二维窗口中的目标选取
 ol.control.Interaction = function (opt_options) {
     var options = opt_options || {};
+
+    // 创建按钮的容器层，设置css样式并在div中创建一个按钮
     var controlDiv = document.createElement('div');
     controlDiv.className = options.className || 'ol-unselectable ol-control';
     var controlButton = document.createElement('button');
-    controlButton.textContent = options.label || 'I';
-    controlButton.title = options.tipLabel || 'Custom interaction';
+    controlButton.textContent = options.label || 'S';
+    controlButton.title = options.tipLabel || '目标选择';
     controlDiv.appendChild(controlButton);
+
     var _this = this;
+    //设置交互工具的状态
     controlButton.addEventListener('click', function () {
         if (_this.get('interaction').getActive()) {
             _this.set('active', false);
@@ -302,11 +326,13 @@ ol.control.Interaction = function (opt_options) {
             _this.set('active', true);
         }
     });
+
     var interaction = options.interaction;
     ol.control.Control.call(this, {
         element: controlDiv,
         target: options.target
     });
+    // 设置交互的属性集合，继承自ol.Object
     this.setProperties({
         interaction: interaction,
         active: false,
@@ -317,8 +343,11 @@ ol.control.Interaction = function (opt_options) {
             }
         }
     });
+
+    // ol.Object::on 当事件发生时的响应
     this.on('change:active', function () {
         this.get('interaction').setActive(this.get('active'));
+        // 根据交互工具的状态，设置按钮的css样式(添加或移除 'active')
         if (this.get('active')) {
             controlButton.classList.add('active');
         } else {
@@ -332,8 +361,10 @@ ol.control.Interaction.prototype.setMap = function (map) {
     ol.control.Control.prototype.setMap.call(this, map);
     var interaction = this.get('interaction');
     if (map === null) {
+        // 如果设置的图为空，去除由on或once返回的ol.Observable 监听
         ol.Observable.unByKey(this.get('eventId'));
     } else if (map.getInteractions().getArray().indexOf(interaction) === -1) {
+        // 如果地图对象不为空，则检查本交互是否在地图中，如果不在地图中则将其加入到地图中
         map.addInteraction(interaction);
         interaction.setActive(false);
         this.set('eventId', map.getControls().on('remove', this.get('destroyFunction'), map));
@@ -415,6 +446,37 @@ function init() {
 
     
 
+    var maskVectorLayer = new ol.layer.Vector({
+        source: new ol.source.Vector({
+            format: new ol.format.GeoJSON({
+                defaultDataProjection: 'EPSG:4326'
+            }),
+            url: '../res/world_capitals.geojson',
+            attributions: [
+                new ol.Attribution({
+                    html: '庚图科技'
+                })
+            ],									
+        }),
+        name:'各国首都',
+        style: new ol.style.Style({
+                    image: new ol.style.RegularShape({
+                        stroke: new ol.style.Stroke({
+                            width: 2,
+                            color: [6, 125, 34, 1]
+                        }),
+                        fill: new ol.style.Fill({
+                            color: [255, 0, 0, 0.3]
+                        }),
+                        points: 5,
+                        radius1: 5,
+                        radius2: 8,
+                        rotation: Math.PI
+                    })
+            })
+    });
+
+
 	
     var map = new ol.Map({
         target: 'map',
@@ -438,45 +500,14 @@ function init() {
 				name: 'Bing'
 			}),*/
      
-            new ol.layer.Tile({source:getGTTileSource('全球影像'),name:'Gt Img'}),
-            new ol.layer.Tile({source:getGTTileSource('影像矢量'),name:'Gt Vec'}),
+            new ol.layer.Tile({source:getGTTileSource('全球影像'),name:'影像'}),
+            new ol.layer.Tile({source:getGTTileSource('影像矢量'),name:'影像叠加'}),
+
+            //new ol.layer.Tile({source:getGTTileSource('矢量瓦片'),name:'矢量'}),
 			
-            new ol.layer.Vector({
-                source: new ol.source.Vector({
-                    format: new ol.format.GeoJSON({
-                        defaultDataProjection: 'EPSG:4326'
-                    }),
-                    url: '../res/world_capitals.geojson',
-                    attributions: [
-                        new ol.Attribution({
-                            html: 'World Capitals © Natural Earth'
-                        })
-                    ],									
-                }),
-				name:'World Capitals',
-				style: new ol.style.Style({
-							image: new ol.style.RegularShape({
-								stroke: new ol.style.Stroke({
-									width: 2,
-									color: [6, 125, 34, 1]
-								}),
-								fill: new ol.style.Fill({
-									color: [255, 0, 0, 0.3]
-								}),
-								points: 5,
-								radius1: 5,
-								radius2: 8,
-								rotation: Math.PI
-							})
-					})
-            })
+            maskVectorLayer,
         ],
         controls: [
-            //Define the default controls
-            /*
-            new ol.control.Zoom({
-                target: 'toolbar'
-            }),*/
             //Define some new controls
             new ol.control.MousePosition({
                 coordinateFormat: function (coordinates) {
@@ -485,20 +516,10 @@ function init() {
 					
 					var hdms = ol.coordinate.toStringHDMS(ol.proj.transform(
             coordinates, 'EPSG:3857', 'EPSG:4326'));
-					return hdms;
-                    //return coord_x + ', ' + coord_y;
+					return hdms;            
                 },
                 target: 'coordinates'
-            }),
-
-           
-
-            /*
-            new ol.control.Cesium({
-                target: 'toolbar'
-            }),
-
-           */
+            })
             
         ],
         view: new ol.View({
@@ -512,12 +533,12 @@ function init() {
     });
 
     
-
-    //var gtLayer = new ol.layer.Tile({'map':map,source:xyzSource});
-
-   
 	var tree = new layerTree({map: map, target: 'layertree', messages:
-			'messageBar'}).createRegistry(map.getLayers().item(0)).createRegistry(map.getLayers().item(1));
+            'messageBar'});
+
+            console.log('layers '+ map.getLayers().getLength());
+    for(var idx = 0 ;idx<map.getLayers().getLength();++idx)
+        tree.createRegistry(map.getLayers().item(idx));
 			
 			
 	//增加本地图层关联
@@ -527,6 +548,44 @@ function init() {
 						tree.addVectorLayer(this);
 						this.parentNode.style.display = 'none';
                     });
+
+    document.getElementById('itemprops_form').addEventListener('submit',
+                        function(evt){
+                            // 阻止默认的提交行为
+                            evt.preventDefault();
+                            // 隐藏显示的内容
+                            this.parentNode.style.display = 'none';
+                            
+                            /**
+                             * 从用户的界面输入获取相应的属性
+                             */
+                            var values = {strokeSize:this.strokeSize.value,
+                                        fillColor:this.fillColor.value,
+                                        strokeColor:this.strokeColor.value};
+                            
+                            
+
+                            var updatedStyle = new ol.style.Style({
+                                image: new ol.style.RegularShape({
+                                    stroke: new ol.style.Stroke({
+                                        width: 3,
+                                        color: [6, 125, 34, 1]
+                                    }),
+                                    fill: new ol.style.Fill({
+                                        color: [255, 0, 0, 0.3]
+                                    }),
+                                    points: 5,
+                                    radius1: 8,
+                                    radius2: 12,
+                                    rotation: Math.PI
+                                })});
+                            if(selected_feature !=null)
+                            {
+                                selected_feature.setStyle(updatedStyle);
+                            }
+                            
+                            //maskVectorLayer.setStyle();
+                        })
                     
 
     var tools = new toolBar({
@@ -535,10 +594,27 @@ function init() {
         layertree: tree,
     }).addControl(new ol.control.Zoom());
 
+    var selected_feature = null;
+    var selectAction = new ol.interaction.Select();
+    selectAction.on('select',function(e){
+            if(e.selected.length>0)
+            {
+                selected_feature = e.selected[0];
+                var itempropsDiv = document.getElementById('itemprops');
+                itempropsDiv.style.display = 'block';
+            }else
+            {
+                alert('no item selected!');
+                selected_feature = null;
+            }
+            
+    });
+    //矢量目标选中按钮
     tools.addControl(new ol.control.Interaction({
-        interaction: new ol.interaction.Select()
+        interaction: selectAction
     }));
 
+    //二、三维视图切换按钮
     tools.addControl(new ol.control.Cesium({
         target: 'toolbar'
     }));

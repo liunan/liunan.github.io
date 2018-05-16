@@ -172,6 +172,10 @@ background-image: url(../../res/button_vector.png);
 background-image: url(../../res/button_delete.png);
 }
 
+.layertree-buttons .itemprops {
+    background-image:url(../../res/button_select.png);
+}
+
 .layercontainer .layer.active {
 border-color: orange;
 }
