@@ -73,7 +73,32 @@
                 <input type="button" value="取消" onclick="this.form.parentNode.style.display = 'none'">
             </form>
         </div>
-		
+        
+        
+        <div id="newvector" class="toggleable" style="display: none;">
+            <form id="newvector_form" class="addlayer">
+                <p>新建标注层</p>
+                <table>
+                    <tr>
+                        <td>图层名称:</td>
+                        <td><input name="displayname" type="text"></td>
+                    </tr>
+                    <tr>
+                        <td>标注类型:</td>
+                        <td><select name="type" required="required">
+                            <option value="point">点</option>
+                            <option value="line">折线</option>
+                            <option value="polygon">面</option>
+                            <option value="geomcollection">图元集合</option>
+                        </select></td>
+                    </tr>
+                    <tr>
+                        <td><input type="submit" value="确定"></td>
+                        <td><input type="button" value="取消" onclick="this.form.parentNode.style.display = 'none'"></td>
+                    </tr>
+                </table>
+            </form>
+        </div>
 		
 		
 	</body>

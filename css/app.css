@@ -191,3 +191,6 @@ border-color: orange;
 .toolbar .ol-deselect button {
     background-image: url(../../res/button_deselect.png);
 }
+.layertree-buttons .newvector {
+    background-image: url(../../res/button_newvector.png);
+}

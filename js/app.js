@@ -17,7 +17,9 @@ var layerTree = function (options) {
 		
 		
         // 增加本地图层按钮
-		controlDiv.appendChild(this.createButton('addvector', '本地图层', 'addlayer'));
+        controlDiv.appendChild(this.createButton('addvector', '本地图层', 'addlayer'));
+        controlDiv.appendChild(this.createButton('newvector', '新建标注层', 'addlayer'));
+
 		// 删除图层按钮
         controlDiv.appendChild(this.createButton('deletelayer', '删除图层', 'deletelayer'));
         
@@ -178,6 +180,24 @@ layerTree.prototype.addVectorLayer = function (form) {
     this.addBufferIcon(layer);
     this.map.addLayer(layer);
     this.messages.textContent = 'Vector layer added successfully.';
+    return this;
+};
+
+layerTree.prototype.newVectorLayer = function (form) {
+    var type = form.type.value;
+    if (type !== 'point' && type !== 'line' && type !== 'polygon' && type !== 'geomcollection') {
+        this.messages.textContent = 'Unrecognized layer type.';
+        return false;
+    }
+    var layer = new ol.layer.Vector({
+        source: new ol.source.Vector(),
+        name: form.displayname.value || '未命名图层',
+        type: type
+    });
+    this.addBufferIcon(layer);
+    this.map.addLayer(layer);
+    layer.getSource().changed();
+    this.messages.textContent = 'New vector layer created successfully.';
     return this;
 };
 
@@ -650,13 +670,18 @@ function init() {
 			
 			
 	//增加本地图层关联
-	document.getElementById('addvector_form').addEventListener('submit',
-						function (evt) {
-						evt.preventDefault();
-						tree.addVectorLayer(this);
-						this.parentNode.style.display = 'none';
-                    });
+    document.getElementById('addvector_form').addEventListener('submit',
+        function (evt) {
+            evt.preventDefault();
+            tree.addVectorLayer(this);
+            this.parentNode.style.display = 'none';
+        });
 
+    document.getElementById('newvector_form').addEventListener('submit', function (evt) {
+        evt.preventDefault();
+        tree.newVectorLayer(this);
+        this.parentNode.style.display = 'none';
+    });
     
                     
 
