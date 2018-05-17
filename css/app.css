@@ -194,3 +194,20 @@ border-color: orange;
 .layertree-buttons .newvector {
     background-image: url(../../res/button_newvector.png);
 }
+
+
+.toolbar .ol-control button:disabled {
+    background-color: rgba(0,0,0,.2);
+}
+.toolbar .ol-control button:disabled:hover {
+    background-color: rgba(0,0,0,.2);
+}
+.toolbar .ol-addpoint button {
+    background-image: url(../../res/button_addpoint.png);
+}
+.toolbar .ol-addline button {
+    background-image: url(../../res/button_addline.png);
+}
+.toolbar .ol-addpolygon button {
+    background-image: url(../../res/button_addpolygon.png);
+}

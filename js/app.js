@@ -30,7 +30,10 @@ var layerTree = function (options) {
         this.layerContainer.className = 'layercontainer';
         containerDiv.appendChild(this.layerContainer);
         var idCounter = 0;
-		this.selectedLayer = null;//当前选中层
+        this.selectedLayer = null;//当前选中层
+        // 可收听对象
+        this.selectEventEmitter = new ol.Observable();
+
         this.createRegistry = function (layer, buffer) {
             layer.set('id', 'layer_' + idCounter);
             idCounter += 1;
@@ -60,6 +63,8 @@ var layerTree = function (options) {
 		// 图层删除事件
 		this.map.getLayers().on('remove', function (evt) {
             this.removeRegistry(evt.element);
+
+            this.selectEventEmitter.changed();
         }, this);
 		
     } else {
@@ -216,6 +221,7 @@ layerTree.prototype.addSelectEvent = function (node, isChild) {
         }
         _this.selectedLayer = targetNode;
         targetNode.classList.add('active');
+        _this.selectEventEmitter.changed();
     });
     return node;
 };
@@ -336,6 +342,13 @@ ol.control.Interaction = function (opt_options) {
     controlButton.textContent = options.label || 'S';
     controlButton.title = options.tipLabel || '目标选择';
     controlDiv.appendChild(controlButton);
+
+    this.setDisabled = function (bool) {
+        if (typeof bool === 'boolean') {
+            controlButton.disabled = bool;
+            return this;
+        }
+    };
 
     var _this = this;
     //设置交互工具的状态
@@ -499,9 +512,97 @@ toolBar.prototype.addSelectControls = function(){
     return this;
 
 
-}
+};
 
+toolBar.prototype.addEditingToolBar = function () {
+    var layertree = this.layertree;
+    this.editingControls = new ol.Collection();
+    var drawPoint = new ol.control.Interaction({
+        label: ' ',
+        tipLabel: 'Add points',
+        className: 'ol-addpoint ol-unselectable ol-control',
+        interaction: this.handleEvents(new ol.interaction.Draw({
+            type: 'Point',
+            snapTolerance: 1
+        }), 'point')
+    }).setDisabled(true);
+    this.editingControls.push(drawPoint);
+    var drawLine = new ol.control.Interaction({
+        label: ' ',
+        tipLabel: 'Add lines',
+        className: 'ol-addline ol-unselectable ol-control',
+        interaction: this.handleEvents(new ol.interaction.Draw({
+            type: 'LineString',
+            snapTolerance: 1
+        }), 'line')
+    }).setDisabled(true);
+    this.editingControls.push(drawLine);
+    var drawPolygon = new ol.control.Interaction({
+        label: ' ',
+        tipLabel: 'Add polygons',
+        className: 'ol-addpolygon ol-unselectable ol-control',
+        interaction: this.handleEvents(new ol.interaction.Draw({
+            type: 'Polygon',
+            snapTolerance: 1
+        }), 'polygon')
+    }).setDisabled(true);
+    this.editingControls.push(drawPolygon);
+    layertree.selectEventEmitter.on('change', function () {
+        var layer = layertree.getLayerById(layertree.selectedLayer.id);
+        if (layer instanceof ol.layer.Vector) {
+            this.editingControls.forEach(function (control) {
+                control.setDisabled(false);
+            });
+            var layerType = layer.get('type');
+            if (layerType !== 'point' && layerType !== 'geomcollection') drawPoint.setDisabled(true).set('active', false);
+            if (layerType !== 'line' && layerType !== 'geomcollection') drawLine.setDisabled(true).set('active', false);
+            if (layerType !== 'polygon' && layerType !== 'geomcollection') drawPolygon.setDisabled(true).set('active', false);
+        } else {
+            this.editingControls.forEach(function (control) {
+                control.set('active', false);
+                control.setDisabled(true);
+            });
+        }
+    }, this);
+    this.addControl(drawPoint).addControl(drawLine).addControl(drawPolygon);
+    return this;
+};
 
+toolBar.prototype.handleEvents = function (interaction, type) {
+    if (type !== 'point') {
+        interaction.on('drawstart', function (evt) {
+            var error = false;
+            if (this.layertree.selectedLayer) {
+                var selectedLayer = this.layertree.getLayerById(this.layertree.selectedLayer.id);
+                var layerType = selectedLayer.get('type');
+                error = (layerType !== type && layerType !== 'geomcollection') ? true : false;
+            } else {
+                error = true;
+            }
+            if (error) {
+                interaction.finishDrawing();
+            }
+        }, this);
+    }
+    interaction.on('drawend', function (evt) {
+        var error = '';
+        errorcheck: if (this.layertree.selectedLayer) {
+            var selectedLayer = this.layertree.getLayerById(this.layertree.selectedLayer.id);
+            error = selectedLayer instanceof ol.layer.Vector ? '' : 'Please select a valid vector layer.';
+            if (error) break errorcheck;
+            var layerType = selectedLayer.get('type');
+            error = (layerType === type || layerType === 'geomcollection') ? '' : 'Selected layer has a different vector type.';
+        } else {
+            error = 'Please select a layer first.';
+        }
+        if (! error) {
+            selectedLayer.getSource().addFeature(evt.feature);
+        } else {
+            this.layertree.messages.textContent = error;
+        }
+    }, this);
+    return interaction;
+};
 
 
 ///////////////////////////////
@@ -730,6 +831,8 @@ function init() {
     */
 
     tools.addSelectControls();
+
+    tools.addEditingToolBar();
 
     //二、三维视图切换按钮
     tools.addControl(new ol.control.Cesium({
