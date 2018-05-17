@@ -562,23 +562,55 @@ function init() {
                             var values = {strokeSize:this.strokeSize.value,
                                         fillColor:this.fillColor.value,
                                         strokeColor:this.strokeColor.value};
-                            
-                            
+                            console.log(values);
 
+                            var fillColor = [parseInt(this.fillColor.value.substring(1,3),16),
+                                                parseInt(this.fillColor.value.substring(3,5),16),
+                                                parseInt(this.fillColor.value.substring(5,7),16),0.5];
+
+                            var strokeColor = [parseInt(this.strokeColor.value.substring(1,3),16),
+                                parseInt(this.strokeColor.value.substring(3,5),16),
+                                parseInt(this.strokeColor.value.substring(5,7),16),1];
+
+                            console.log(fillColor);
+                            
                             var updatedStyle = new ol.style.Style({
                                 image: new ol.style.RegularShape({
                                     stroke: new ol.style.Stroke({
-                                        width: 3,
+                                        width: parseInt(this.strokeSize.value/4),
+                                        color: strokeColor
+                                    }),
+
+                                    fill: new ol.style.Fill({
+                                        color: fillColor
+                                    }),
+                                    points: 5,
+                                    
+                                    radius1: parseInt(this.strokeSize.value),
+                                    radius2: parseInt(this.strokeSize.value*3/2),
+                                    
+                               
+                                    rotation: Math.PI
+                                })});
+                            
+                            
+                            //原有风格
+                            /*
+                            var updatedStyle = new ol.style.Style({
+                                image: new ol.style.RegularShape({
+                                    stroke: new ol.style.Stroke({
+                                        width: 2,
                                         color: [6, 125, 34, 1]
                                     }),
                                     fill: new ol.style.Fill({
                                         color: [255, 0, 0, 0.3]
                                     }),
                                     points: 5,
-                                    radius1: 8,
-                                    radius2: 12,
+                                    radius1: 10,
+                                    radius2: 16,
                                     rotation: Math.PI
-                                })});
+                                })
+                                });*/
                             if(selected_feature !=null)
                             {
                                 selected_feature.setStyle(updatedStyle);
