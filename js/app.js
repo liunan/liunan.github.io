@@ -191,18 +191,41 @@ layerTree.prototype.addVectorLayer = function (form) {
 layerTree.prototype.newVectorLayer = function (form) {
     var type = form.type.value;
     if (type !== 'point' && type !== 'line' && type !== 'polygon' && type !== 'geomcollection') {
-        this.messages.textContent = 'Unrecognized layer type.';
+        this.messages.textContent = '不可识别的图层类型';
         return false;
     }
+    //图层风格
+    var fill = new ol.style.Fill({
+        color: 'rgba(255,255,0,0.4)'
+      });
+      var stroke = new ol.style.Stroke({
+        color: '#00FF00',
+        width: 1.25
+      });
+      var styles = [
+        new ol.style.Style({
+          image: new ol.style.Circle({
+            fill: fill,
+            stroke: stroke,
+            radius: 15
+          }),
+          fill: fill,
+          stroke: stroke
+        })
+      ];
+
+
+
     var layer = new ol.layer.Vector({
         source: new ol.source.Vector(),
         name: form.displayname.value || '未命名图层',
-        type: type
+        type: type,
+        style:styles
     });
     this.addBufferIcon(layer);
     this.map.addLayer(layer);
     layer.getSource().changed();
-    this.messages.textContent = 'New vector layer created successfully.';
+    this.messages.textContent = `新的矢量图层${layer.get('name')}添加成功。`;
     return this;
 };
 
@@ -467,7 +490,15 @@ toolBar.prototype.addSelectControls = function(){
                         
                    
                         rotation: Math.PI
-                    })});
+                    }),
+                    stroke:new ol.style.Stroke({
+                        width: parseInt(this.strokeSize.value/4),
+                        color: strokeColor
+                    }),
+                    fill: new ol.style.Fill({
+                        color: fillColor
+                    })
+                });
             
                 if(selected_feature !=null)
                 {
@@ -480,9 +511,8 @@ toolBar.prototype.addSelectControls = function(){
             document.getElementById('itemprops_form').addEventListener('submit',updateFeatureStyle);
 
             //////////////////////////////////////////
-        }else
+        }else//无选中目标，将当前选择目标置空
         {
-            alert('no item selected!');
             selected_feature = null;
         }
         
@@ -519,7 +549,7 @@ toolBar.prototype.addEditingToolBar = function () {
     this.editingControls = new ol.Collection();
     var drawPoint = new ol.control.Interaction({
         label: ' ',
-        tipLabel: 'Add points',
+        tipLabel: '增加点标',
         className: 'ol-addpoint ol-unselectable ol-control',
         interaction: this.handleEvents(new ol.interaction.Draw({
             type: 'Point',
@@ -529,7 +559,7 @@ toolBar.prototype.addEditingToolBar = function () {
     this.editingControls.push(drawPoint);
     var drawLine = new ol.control.Interaction({
         label: ' ',
-        tipLabel: 'Add lines',
+        tipLabel: '增加折线',
         className: 'ol-addline ol-unselectable ol-control',
         interaction: this.handleEvents(new ol.interaction.Draw({
             type: 'LineString',
@@ -539,7 +569,7 @@ toolBar.prototype.addEditingToolBar = function () {
     this.editingControls.push(drawLine);
     var drawPolygon = new ol.control.Interaction({
         label: ' ',
-        tipLabel: 'Add polygons',
+        tipLabel: '增加多边形',
         className: 'ol-addpolygon ol-unselectable ol-control',
         interaction: this.handleEvents(new ol.interaction.Draw({
             type: 'Polygon',
