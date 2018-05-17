@@ -492,7 +492,7 @@ toolBar.prototype.addSelectControls = function(){
                         rotation: Math.PI
                     }),
                     stroke:new ol.style.Stroke({
-                        width: parseInt(this.strokeSize.value/4),
+                        width: parseInt(this.strokeSize.value),
                         color: strokeColor
                     }),
                     fill: new ol.style.Fill({
