@@ -56,11 +56,14 @@ body {
     background-color: rgba(219,63,63,.5);
     width: 2em;
     display: inline-block;
+    vertical-align: middle;
+    background-size: 1em;
+    background-repeat: no-repeat;
+    background-position: 50%;
 }
 .toolbar .ol-control button:hover {
     background-color: rgba(219,63,63,1);
 }
-
 
 .layertree {
     width: 20%;
@@ -130,12 +133,7 @@ body {
 .layertree .layertree-buttons button:hover {
     background-color: rgba(0,0,0,1);
 }
-.layertree-buttons .addwms {
-    background-image: url(../../res/button_wms.png);
-}
-.layertree-buttons .addwfs {
-    background-image: url(../../res/button_wfs.png);
-}
+
 .toggleable {
     position: fixed;
     background-color: rgba(0,0,0,.5);
@@ -178,4 +176,18 @@ background-image: url(../../res/button_delete.png);
 
 .layercontainer .layer.active {
 border-color: orange;
+}
+
+.toolbar .ol-control button.active {
+    background-color: rgba(234,129,8,1);
+}
+.toolbar .ol-control button.active:hover {
+    background-color: rgba(234,129,8,1);
+}
+.toolbar .ol-singleselect button {
+    background-image: url(../../res/button_select.png);
+}
+
+.toolbar .ol-deselect button {
+    background-image: url(../../res/button_deselect.png);
 }

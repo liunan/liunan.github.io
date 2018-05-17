@@ -21,7 +21,7 @@ var layerTree = function (options) {
 		// 删除图层按钮
         controlDiv.appendChild(this.createButton('deletelayer', '删除图层', 'deletelayer'));
         
-        controlDiv.appendChild(this.createButton('itemprops', '图元属性', 'itemprops'));
+        //controlDiv.appendChild(this.createButton('itemprops', '图元属性', 'itemprops'));
 
         containerDiv.appendChild(controlDiv);
         this.layerContainer = document.createElement('div');
@@ -95,12 +95,12 @@ layerTree.prototype.createButton = function (elemName, elemTitle, elemType) {
                 }
             });
             return buttonElem;
-        case 'itemprops':
-            var _this = this;
-            buttonElem.addEventListener('click', function () {
-                document.getElementById(elemName).style.display = 'block';
-            });
-            return buttonElem;			
+        // case 'itemprops':
+        //     var _this = this;
+        //     buttonElem.addEventListener('click', function () {
+        //         document.getElementById(elemName).style.display = 'block';
+        //     });
+        //     return buttonElem;			
         default:
             return false;
     }
@@ -373,6 +373,114 @@ ol.control.Interaction.prototype.setMap = function (map) {
 
 
 
+toolBar.prototype.addSelectControls = function(){
+    var layertree = this.layertree;
+    //仅选择图层控制器中的当前层
+    var selectInteraction = new ol.interaction.Select({
+        layers: function (layer) {
+            if (layertree.selectedLayer) {
+                if (layer === layertree.getLayerById(layertree.selectedLayer.id)) {
+                    return true;
+                }
+            }
+            return false;
+        }
+    });
+
+    var selected_feature = null;
+    selectInteraction.on('select',function(e){
+        if(e.selected.length>0)
+        {
+            selected_feature = e.selected[0];
+            var itempropsDiv = document.getElementById('itemprops');
+            itempropsDiv.style.display = 'block';
+            ////////////////////////////////////////////
+            function updateFeatureStyle(evt){
+                // 阻止默认的提交行为
+                evt.preventDefault();
+                // 隐藏显示的内容
+                this.parentNode.style.display = 'none';
+                
+                /**
+                 * 从用户的界面输入获取相应的属性
+                 */
+                
+               
+                //将从form中获取的RGB HEX转换成为ol [r,g,b,a]数组
+                var fillColor = [parseInt(this.fillColor.value.substring(1,3),16),
+                                    parseInt(this.fillColor.value.substring(3,5),16),
+                                    parseInt(this.fillColor.value.substring(5,7),16),0.5];
+
+                var strokeColor = [parseInt(this.strokeColor.value.substring(1,3),16),
+                    parseInt(this.strokeColor.value.substring(3,5),16),
+                    parseInt(this.strokeColor.value.substring(5,7),16),1];
+
+               
+                
+                var updatedStyle = new ol.style.Style({
+                    image: new ol.style.RegularShape({
+                        stroke: new ol.style.Stroke({
+                            width: parseInt(this.strokeSize.value/4),
+                            color: strokeColor
+                        }),
+
+                        fill: new ol.style.Fill({
+                            color: fillColor
+                        }),
+                        points: 5,
+                        
+                        radius1: parseInt(this.strokeSize.value),
+                        radius2: parseInt(this.strokeSize.value*3/2),
+                        
+                   
+                        rotation: Math.PI
+                    })});
+            
+                if(selected_feature !=null)
+                {
+                    selected_feature.setStyle(updatedStyle);
+                }
+                
+                document.getElementById('itemprops_form').removeEventListener(updateFeatureStyle);
+            }
+
+            document.getElementById('itemprops_form').addEventListener('submit',updateFeatureStyle);
+
+            //////////////////////////////////////////
+        }else
+        {
+            alert('no item selected!');
+            selected_feature = null;
+        }
+        
+    });
+
+    var selectSingle = new ol.control.Interaction({
+        label: ' ',
+        tipLabel: '目标单选',
+        className: 'ol-singleselect ol-unselectable ol-control',
+        interaction: selectInteraction
+    });
+
+    // 取消选取
+    var controlDiv = document.createElement('div');
+    controlDiv.className = 'ol-deselect ol-unselectable ol-control';
+    var controlButton = document.createElement('button');
+    controlButton.title = 'Remove selection(s)';
+    controlDiv.appendChild(controlButton);
+    controlButton.addEventListener('click', function () {
+        selectInteraction.getFeatures().clear();
+    });
+    var deselectControl = new ol.control.Control({
+        element: controlDiv
+    });
+    this.addControl(selectSingle)
+        .addControl(deselectControl);
+    return this;
+
+
+}
+
 
 
 
@@ -549,75 +657,7 @@ function init() {
 						this.parentNode.style.display = 'none';
                     });
 
-    document.getElementById('itemprops_form').addEventListener('submit',
-                        function(evt){
-                            // 阻止默认的提交行为
-                            evt.preventDefault();
-                            // 隐藏显示的内容
-                            this.parentNode.style.display = 'none';
-                            
-                            /**
-                             * 从用户的界面输入获取相应的属性
-                             */
-                            var values = {strokeSize:this.strokeSize.value,
-                                        fillColor:this.fillColor.value,
-                                        strokeColor:this.strokeColor.value};
-                            console.log(values);
-
-                            var fillColor = [parseInt(this.fillColor.value.substring(1,3),16),
-                                                parseInt(this.fillColor.value.substring(3,5),16),
-                                                parseInt(this.fillColor.value.substring(5,7),16),0.5];
-
-                            var strokeColor = [parseInt(this.strokeColor.value.substring(1,3),16),
-                                parseInt(this.strokeColor.value.substring(3,5),16),
-                                parseInt(this.strokeColor.value.substring(5,7),16),1];
-
-                            console.log(fillColor);
-                            
-                            var updatedStyle = new ol.style.Style({
-                                image: new ol.style.RegularShape({
-                                    stroke: new ol.style.Stroke({
-                                        width: parseInt(this.strokeSize.value/4),
-                                        color: strokeColor
-                                    }),
-
-                                    fill: new ol.style.Fill({
-                                        color: fillColor
-                                    }),
-                                    points: 5,
-                                    
-                                    radius1: parseInt(this.strokeSize.value),
-                                    radius2: parseInt(this.strokeSize.value*3/2),
-                                    
-                               
-                                    rotation: Math.PI
-                                })});
-                            
-                            
-                            //原有风格
-                            /*
-                            var updatedStyle = new ol.style.Style({
-                                image: new ol.style.RegularShape({
-                                    stroke: new ol.style.Stroke({
-                                        width: 2,
-                                        color: [6, 125, 34, 1]
-                                    }),
-                                    fill: new ol.style.Fill({
-                                        color: [255, 0, 0, 0.3]
-                                    }),
-                                    points: 5,
-                                    radius1: 10,
-                                    radius2: 16,
-                                    rotation: Math.PI
-                                })
-                                });*/
-                            if(selected_feature !=null)
-                            {
-                                selected_feature.setStyle(updatedStyle);
-                            }
-                            
-                            //maskVectorLayer.setStyle();
-                        })
+    
                     
 
     var tools = new toolBar({
@@ -626,6 +666,7 @@ function init() {
         layertree: tree,
     }).addControl(new ol.control.Zoom());
 
+    /*
     var selected_feature = null;
     var selectAction = new ol.interaction.Select();
     selectAction.on('select',function(e){
@@ -645,6 +686,25 @@ function init() {
     tools.addControl(new ol.control.Interaction({
         interaction: selectAction
     }));
+
+
+    //取消选中按钮
+    var controlDiv = document.createElement('div');
+    controlDiv.className = 'ol-deselect ol-unselectable ol-control';
+    var controlButton = document.createElement('button');
+    controlButton.title = '取消选取';
+    controlDiv.appendChild(controlButton);
+    controlButton.addEventListener('click', function () {
+        selectAction.getFeatures().clear();
+    });
+    var deselectControl = new ol.control.Control({
+        element: controlDiv
+    });
+
+    tools.addControl(deselectControl);
+    */
+
+    tools.addSelectControls();
 
     //二、三维视图切换按钮
     tools.addControl(new ol.control.Cesium({
