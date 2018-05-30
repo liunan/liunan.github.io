@@ -1,0 +1,192 @@
+<!DOCTYPE HTML>
+<!--
+    Licensed to the Apache Software Foundation (ASF) under one
+    or more contributor license agreements.  See the NOTICE file
+    distributed with this work for additional information
+    regarding copyright ownership.  The ASF licenses this file
+    to you under the Apache License, Version 2.0 (the
+    "License"); you may not use this file except in compliance
+    with the License.  You may obtain a copy of the License at
+
+      http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing,
+    software distributed under the License is distributed on an
+    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+    KIND, either express or implied.  See the License for the
+    specific language governing permissions and limitations
+    under the License.
+-->
+<html>
+
+    <head>
+        <link rel="stylesheet" type="text/css" href="guacamole.css"/>
+        <title>Guacamole (EXAMPLE)</title>
+        <script src="Decoder.js"></script>
+        <script type="text/javascript" src="YUVCanvas.js"></script>
+        <script src="Player.js"></script>
+
+        <script type="text/javascript" src="mp4.js"></script>
+    </head>
+
+    <body>
+
+        <!-- Display -->
+        <div id="display"></div>
+        <div id="videocontainer"></div>
+
+        <!-- Guacamole JavaScript API -->
+        <script type="text/javascript"
+            src="guacamole-common-js/all.min.js"></script>
+
+        <script type="text/javascript">
+            /**
+             * video player implement
+             * 
+             * */
+            var layerplyr = null;
+            gtVideoPalyer = function(stream, layer,mimetype){
+                /**
+                 * Guacamole.ArrayBufferReader wrapped around the audio input stream
+                 * provided with this Guacamole.RawAudioPlayer was created.
+                 *
+                 * @private
+                 * @type {Guacamole.ArrayBufferReader}
+                 */
+                var reader = new Guacamole.ArrayBufferReader(stream);
+
+                /**
+                 * The queue of all pending audio packets, as an array of sample arrays.
+                 * Audio packets which are pending playback will be added to this queue for
+                 * further manipulation prior to scheduling via the Web Audio API. Once an
+                 * audio packet leaves this queue and is scheduled via the Web Audio API,
+                 * no further modifications can be made to that packet.
+                 *
+                 * @private
+                 * @type {SampleArray[]}
+                 */
+                var packetQueue = [];
+
+
+                 var plr = new Player({useWorker:false,size:{width:1024,height:768}});
+
+                //var display = document.getElementById("videocontainer");
+                //var display = document.getElementById("display");
+
+                var display = layer.getElement();
+
+                display.appendChild(plr.canvas);
+
+
+               
+               reader.ondata = function playReceivedAudio(data) {
+                    console.log("ondata");
+
+
+                    var bufData = new Uint8Array(data); 
+                    //plr.decode(bufData);
+                    
+                    setTimeout(function foo() {
+                        plr.decode(bufData);
+                    },1);
+                    
+               }
+
+
+                reader.onend = function playEnd(){
+                    console.log('read finished');
+                }
+
+                /** @override */
+                this.sync = function sync() {
+                    // Calculate elapsed time since last sync
+                    var now = context.currentTime;
+                    // Reschedule future playback time such that playback latency is
+                    // bounded within a reasonable latency threshold
+                    nextPacketTime = Math.min(nextPacketTime, now + maxLatency);
+                };
+
+            };
+            gtVideoPalyer.prototype = new Guacamole.VideoPlayer();
+        
+        </script>
+
+        <!-- Init -->
+        <script type="text/javascript"> /* <![CDATA[ */
+
+            // Get display div from document
+            var display = document.getElementById("display");
+
+            // Instantiate client, using an HTTP tunnel for communications.
+            var guac = new Guacamole.Client(
+                new Guacamole.HTTPTunnel("tunnel")
+            );
+
+            // Add client to display div
+            display.appendChild(guac.getDisplay().getElement());
+            
+            // Error handler
+            guac.onerror = function(error) {
+
+                alert('err_msg' + error);
+            };
+
+            console.log('now install onvideo handler');
+            guac.onvideo = function(stream,layer,mimetype){
+
+                console.log('guac.onvideo called' + layer + ','+ mimetype);
+                /*
+                layer.strokeColor('round','round',3,255,0,0,255);
+                layer.moveTo(100,100);
+                layer.lineTo(400,400);
+                */
+
+                return new gtVideoPalyer(stream,layer,mimetype);
+               /* if(layerplyr==null)
+                {
+                    layerplyr = new gtVideoPalyer(stream,layer,mimetype);
+                    return layerplyr;
+                }
+                    
+                else
+                   {
+                       console.log("player recreated!");
+                    return null;                    
+                   } 
+                   */
+            }
+
+            // Connect
+            guac.connect();
+
+            // Disconnect on close
+            window.onunload = function() {
+                guac.disconnect();
+            }
+
+            // Mouse
+            var mouse = new Guacamole.Mouse(guac.getDisplay().getElement());
+
+            mouse.onmousedown = 
+            mouse.onmouseup   =
+            mouse.onmousemove = function(mouseState) {
+                //console.log(`(${mouseState.x},${mouseState.y}) L:${mouseState.left}R:${mouseState.right}U:${mouseState.up}D:${mouseState.down}`);
+                guac.sendMouseState(mouseState);
+            };
+
+            // Keyboard
+            var keyboard = new Guacamole.Keyboard(document);
+
+            keyboard.onkeydown = function (keysym) {
+                guac.sendKeyEvent(1, keysym);
+            };
+
+            keyboard.onkeyup = function (keysym) {
+                guac.sendKeyEvent(0, keysym);
+            };
+
+        /* ]]> */ </script>
+
+    </body>
+
+</html>
