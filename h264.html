@@ -1,0 +1,160 @@
+<!doctype html>
+<html>
+    <head>
+            <meta charset="utf-8">
+            <title>js native H.264 video Player</title>
+            <!--<link type="text/css" href="screen.css" rel="stylesheet" />-->
+
+            <script src="./js/Decoder.js"></script>
+            <script src="./js/YUVCanvas.js"></script>
+            <script src="./js/Player.js"></script>    
+                        
+    </head>
+
+<body>
+    <!--<input type="button" onclick="usemediaSrc()" value="click to start">-->
+
+    <input type="button" onclick="test()" value="click to start">
+
+    <input type="text" id="videosrc" value="sample/3d_demo.264">
+    
+    <div id="videoplayer" class="broadway" src="mytest.mp4" width="640" height="360" style="float: left; position: relative;" workers="false" render="true" webgl="auto"></div>
+    <!---->
+
+
+
+
+
+      
+
+
+    <script>
+
+            var xmlhttp;
+            function test() {
+                //alert('test clicked');
+
+                xmlhttp = new XMLHttpRequest();
+
+                var src = document.getElementById('videosrc').value;
+                xmlhttp.onreadystatechange = state_Change;
+                xmlhttp.responseType = "arraybuffer";//"blob";//"arraybuffer";
+                //xmlhttp.open("GET", "out.h264", true);
+                //xmlhttp.open("GET","gis.baseline.h264",true);
+                xmlhttp.open("GET", src, true);
+                xmlhttp.send(null);
+
+            }
+
+            function state_Change() {
+                if (xmlhttp.readyState == 4) {// 4 = "loaded"
+                    if (xmlhttp.status == 200) {// 200 = OK
+                        
+                        var plr = new Player({ 
+                                                useWorker: false, 
+                                                webgl:false,
+                                                reuseMemory: true,
+                                                size: { width: 640, height: 368 } 
+                                            });
+                        var display = document.getElementById("videoplayer");
+                        display.appendChild(plr.canvas);                                                           
+
+                        var bufData = new Uint8Array(xmlhttp.response,0,xmlhttp.response.size);    
+                        
+                        var nalu_count = 0;
+                        var idx = 0;
+                        var nal_start = 0;
+                        
+
+                      var decoder = new Decoder({ rgb: false });
+
+                      decoder.onPictureDecoded = function (buffer, width, height, infos) {
+                        console.log(` ${nalu_count}: picture decoded ${width},${height}`);
+                      }
+
+                        function isNALU(type)
+                        {
+                          var result = null;
+                          switch(type)
+                          {
+                            case 0x06:
+                              result = "SEI";
+                              break;
+                            case 0x65://I frame
+                              result="I";
+                              break;
+                            case 0x41://P frame
+                              result="P";
+                              break;
+                            case 0x67://SPS
+                              result ="SPS";
+                              break;
+                            case 0x68://PPS
+                              result="PPS";
+                              break;
+                            case 0x01://
+                              result = "NoIDR"
+                            //case 0xb7://end of stream                              
+                            //  result = "End";
+                              break;
+                          }
+                          return result;
+                        }
+                                               
+                        
+                        setTimeout(function foo() {
+
+                          while(idx<bufData.length-3)
+                          {
+                            //var value = bufData[idx] << 24 | bufData[idx+1]<< 16 | bufData[idx+2] << 8 | bufData[idx+3]
+                            var value = bufData[idx] << 16 | bufData[idx+1]<< 8 | bufData[idx+2];
+
+                            if(value == 1)
+                            {
+                              var type = bufData[idx+3];
+                              var nalu_type = isNALU(type);
+                              if(nalu_type!=null && nalu_type!="SEI" )
+                              {
+                                if(nal_start!=0)
+                                {
+                                  var nalu_end = idx + ( bufData[idx-1]==0?-1:0 );
+                                  var nalu = bufData.subarray(nal_start,nalu_end );//2 or 3 zero char
+                                  var current_type = isNALU(bufData[nal_start]);
+                                  ++nalu_count;
+                                  //console.log(`${nalu_count}:${nal_start}->${nalu_end} @ ${nalu_end-nal_start}  ${current_type}`);
+                                  decoder.decode(nalu);
+
+                                  plr.decode(nalu);
+                                }
+
+                                idx+=3;
+                                nal_start = idx; 
+                                setTimeout(foo.bind(this), 1);
+                                break;                             
+                              }else
+                              {
+                                ++idx;
+                              }                            
+                            }
+                            else
+                            {
+                              idx++;
+                            }                                                   
+                          }
+
+                        }.bind(this),1);                                                  
+                    }
+                    else {
+                        alert("Problem retrieving XML data");
+                    }
+                }
+
+            }
+        
+
+            
+    </script>
+</body>
+    
+
+</html>
