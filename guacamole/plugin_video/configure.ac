@@ -1,8 +1,11 @@
 # Project information
 AC_PREREQ([2.61])
 AC_INIT([libguac-client-video], [0.1.0])
-AM_INIT_AUTOMAKE([-Wall -Werror foreign subdir-objects])
+#AM_INIT_AUTOMAKE([-Wall -Werror foreign subdir-objects])
+AM_INIT_AUTOMAKE([-Wall  foreign subdir-objects])
 AM_SILENT_RULES([yes])
+
+AC_SUBST(CPPFLAGS, "$CPPFLAGS -I/usr/include/cairo")
 
 AC_CONFIG_MACRO_DIRS([m4])
 
