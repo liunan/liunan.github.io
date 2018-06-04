@@ -13,6 +13,8 @@
 #include <stdio.h>
 #include <string.h>
 
+#include <libavcodec/avcodec.h>
+
 
 #include "bs_ln_cairo.h"
 #include "bs_blob_collective.h"
@@ -26,7 +28,7 @@
 #define XK_LATIN1
 #include <X11/keysymdef.h>
 
-#define M_PI 3.1415926
+
 
 
 typedef struct bs_main_data_st
@@ -65,13 +67,20 @@ bs_main_clear(cairo_t *pCairo,
 
 
 static void
-bs_main_redraw(bs_main_data_t *pMainData)
-{
+bs_main_redraw(bs_main_data_t *pMainData,guac_socket* socket,video_client_data* pClientData)
+{  
   cairo_t *pCairo;
 
-  bs_profiler_start(BS_PROFILER_TASK_DRAW);
 
-  pCairo = bs_cairo_sdl_get_cairo(pMainData->pCairoSdl);
+  //bs_profiler_start(BS_PROFILER_TASK_DRAW);
+
+  //pCairo = bs_cairo_sdl_get_cairo(pMainData->pCairoSdl);
+
+  pCairo = pMainData->pCairoSdl->pCairo;
+
+  guac_protocol_send_blob(socket, pClientData->video_stream,
+                             "123456778888", 3 /*length from end to start*/);
+  guac_socket_flush(socket);
 
   //bs_cairo_sdl_lock_surface(pMainData->pCairoSdl);
 
@@ -85,9 +94,36 @@ bs_main_redraw(bs_main_data_t *pMainData)
         //TODO: no sdl update ,we need get rendering result to the video stream
         //SDL_UpdateRect(pMainData->pCairoSdl->pScreen, 0, 0, 0, 0);
 
+        //flush the pending rendering instructions
+        cairo_surface_flush(cairo_get_target(pCairo));
+
+        guac_protocol_send_blob(socket, pClientData->video_stream,
+                             "123456778888", 4 /*length from end to start*/);
+        guac_socket_flush(socket);
+
+        unsigned char * imgBuf = cairo_image_surface_get_data((cairo_get_target(pCairo)));
+        static int outted = 0;
+        if(imgBuf && !outted)
+        {
+            outted = 1;
+            FILE* fp  =fopen("/home/liunan/output.txt","wb");
+            char meta[260] = {0};
+            sprintf(meta,"P6\n%d %d\n%d\n",cairo_image_surface_get_stride(cairo_get_target(pCairo)),768,65536);
+            fwrite(meta,strlen(meta),1,fp);
+            fflush(fp);
+            fclose(fp);
+            
+            cairo_surface_write_to_png(cairo_get_target(pCairo),"/home/liunan/output.png");
+            
+        }
+    
+    guac_protocol_send_blob(socket, pClientData->video_stream,
+                             "123456778888", 5 /*length from end to start*/);
+    guac_socket_flush(socket);
+
   //bs_cairo_sdl_unlock_surface(pMainData->pCairoSdl);
 
-  bs_profiler_stop(BS_PROFILER_TASK_DRAW);
+  //bs_profiler_stop(BS_PROFILER_TASK_DRAW);
 }
 
 static void
@@ -276,6 +312,54 @@ int key_handler(guac_user* user, int keysym, int pressed)
     return 0;
 }
 
+
+/**
+ * context data is stored in the enc_ctx and current frame data is in the frame parameter,
+ * we will get the stream buf result via the pkt
+ * 
+ * finally we send all the bytes to the video stream in the guacamole user struct.
+ * */
+static void encode(AVCodecContext *enc_ctx, AVFrame *frame, AVPacket *pkt,guac_user *user)
+{
+    int ret;
+
+    /* send the frame to the encoder */
+    // if (frame)
+    //     printf("Send frame %3"PRId64"\n", frame->pts);
+
+    ret = avcodec_send_frame(enc_ctx, frame);
+    // if (ret < 0) {
+    //     fprintf(stderr, "Error sending a frame for encoding\n");
+    //     exit(1);
+    // }
+
+    guac_client *client = user->client;
+    /* Get user-specific socket */
+    guac_socket *socket = user->socket;
+    video_client_data *client_data = (video_client_data *)client->data;
+
+    while (ret >= 0) {
+        ret = avcodec_receive_packet(enc_ctx, pkt);
+        if (ret == AVERROR(EAGAIN) || ret == AVERROR_EOF)
+            return;
+        else if (ret < 0) {
+            fprintf(stderr, "Error during encoding\n");
+            exit(1);
+        }
+
+        //printf("Write packet %3"PRId64" (size=%5d)\n", pkt->pts, pkt->size);
+        //fwrite(pkt->data, 1, pkt->size, outfile);
+        guac_protocol_send_blob(socket, client_data->video_stream,
+                             pkt->data, pkt->size /*length from end to start*/);
+        guac_socket_flush(socket);
+
+        av_packet_unref(pkt);
+    }
+}
+
+//forward declation
+void* video_render_thread(void* arg);
+
 int video_join_handler(guac_user *user, int argc, char **argv)
 {
 
@@ -293,7 +377,7 @@ int video_join_handler(guac_user *user, int argc, char **argv)
 
     /* Prepare a curve which covers the entire layer */
     guac_protocol_send_rect(socket, GUAC_DEFAULT_LAYER,
-                            0, 0, 1920, 1080);
+                            0, 0, 1024, 768);
 
     /* Fill background with solid color white */
     guac_protocol_send_cfill(socket,
@@ -307,6 +391,7 @@ int video_join_handler(guac_user *user, int argc, char **argv)
     /* Flush buffer */
     guac_socket_flush(socket);
 
+    // allocate user stream for the video tunnel
     video_client_data *pClientData = (video_client_data *)client->data;
     pClientData->video_stream = guac_user_alloc_stream(user);
 
@@ -317,7 +402,49 @@ int video_join_handler(guac_user *user, int argc, char **argv)
                                      "video/mp4" /*stream type*/);
     guac_socket_flush(socket);
 
-    /* User successfully initialized */
+
+
+    //make the time-based callback
+    pthread_create(&pClientData->render_thread, NULL, video_render_thread, user);
+   
+
+
+    
+#if 0    
+    int i, ret, x, y;
+
+    for (i = 0; i < 200; i++)
+    {
+        
+        av_frame_make_writable(frame);
+        /* prepare a dummy image */
+        /* Y */
+        for (y = 0; y < c->height; y++) {
+            for (x = 0; x < c->width; x++) {
+                frame->data[0][y * frame->linesize[0] + x] = x + y + i * 3;
+            }
+        }
+
+        /* Cb and Cr */
+        for (y = 0; y < c->height/2; y++) {
+            for (x = 0; x < c->width/2; x++) {
+                frame->data[1][y * frame->linesize[1] + x] = 128 + y + i * 2;
+                frame->data[2][y * frame->linesize[2] + x] = 64 + x + i * 5;
+            }
+        }
+
+        frame->pts = i;
+
+        guac_protocol_send_blob(socket, pClientData->video_stream,
+                             "video/mp4", 7 );
+            guac_socket_flush(socket);
+
+        /* encode the image */
+        encode(c, frame, pkt,user);// now ready to transmit the encoded buffer resut
+
+    }
+
+#endif    
     return 0;
 }
 
@@ -352,12 +479,107 @@ int video_free_handler(guac_client *client)
     return 0;
 }
 
+void sendframe()
+{
+
+}
 
 void* video_render_thread(void* arg) {
 
     /* Get data */
-    guac_client* client = (guac_client*) arg;
-    //ball_client_data* data = (ball_client_data*) client->data;
+    guac_user* user = (guac_user*) arg;
+    guac_client *client = user->client;    
+    guac_socket* socket = client->socket;
+    video_client_data* pClientData = (video_client_data*) client->data;
+
+    ////////////////////////////////////////
+    // ffmpeg context
+    int i = 0;
+
+    // send init frame 
+    const AVCodec *codec;
+    codec = avcodec_find_encoder_by_name("libx264");
+    
+
+
+    AVCodecContext *c= NULL;
+    c = avcodec_alloc_context3(codec);
+
+    AVFrame *frame;
+    AVPacket *pkt;
+    
+    pkt = av_packet_alloc();
+
+    /* put sample parameters */
+    c->bit_rate = 20000000;
+    /* resolution must be a multiple of two */
+    c->width = 1024;
+    c->height = 768;
+    /* frames per second */
+    c->time_base = (AVRational){1, 25};
+    c->framerate = (AVRational){25, 1};
+
+    /* emit one intra frame every ten frames
+     * check frame pict_type before passing frame
+     * to encoder, if frame->pict_type is AV_PICTURE_TYPE_I
+     * then gop_size is ignored and the output of encoder
+     * will always be I frame irrespective to gop_size
+     */
+    c->gop_size = 10;
+    c->max_b_frames = 1;
+    c->pix_fmt = AV_PIX_FMT_YUV420P;
+
+    if (codec->id == AV_CODEC_ID_H264)
+    {
+        av_opt_set(c->priv_data, "preset", "slow", 0);
+        av_opt_set(c->priv_data, "profile", "baseline", 0);
+
+    }
+    
+
+    avcodec_open2(c, codec, NULL);//TODO: get open result
+
+    frame = av_frame_alloc();
+    frame->format = c->pix_fmt;
+    frame->width  = c->width;
+    frame->height = c->height;
+
+    av_frame_get_buffer(frame, 32);//TODO: check result
+
+
+
+        //////////////////////////////////////////    
+    bs_main_data_t *pMainData;
+    BS_MEM_ALLOC_TYPE(pMainData, bs_main_data_t, 1);
+
+    bs_vector_t force;
+    int usedTime;
+    struct timeval startTime, stopTime;
+
+    int screenW,screenH;
+    screenW = 1024;
+    screenH = 768;
+
+    pMainData->pListFactory = bs_list_factory_create();
+    pMainData->pCollective = bs_blob_collective_create(1.0f, 1.0f, pMainData->pListFactory);    
+    pMainData->pEnv = bs_env_create(0.0f, 0.0f, 6.0f, 4.0f);
+    pMainData->pGravity = bs_vector_create(0.0f, 10.0f);
+
+    pMainData->pCairoSdl = bs_ln_cairo_st_create(screenW, screenH);
+    pMainData->width = screenW;
+    pMainData->height = screenH;
+    pMainData->newTimerInterval = 50;
+    pMainData->fps = 20.0;
+    pMainData->running = TRUE;
+
+    //bs_profiler_init();
+
+    gettimeofday(&startTime, NULL);
+    pMainData->lastFrameTimeStamp = startTime.tv_sec * 1000 + startTime.tv_usec / 1000;
+    
+
+
+    int ret,x,y;
 
     /* Update ball position as long as client is running */
     while (client->state == GUAC_CLIENT_RUNNING) {
@@ -367,7 +589,41 @@ void* video_render_thread(void* arg) {
         //usleep(30000);
 
         /* Update position */
+
+
+        {
+        
+            av_frame_make_writable(frame);
+            /* prepare a dummy image */
+
+
+            guac_protocol_send_blob(socket, pClientData->video_stream,
+                             "123", 1 /*length from end to start*/);
+            guac_socket_flush(socket);
+
+            ////////////////////////////
+            gettimeofday(&startTime, NULL);
+            bs_main_update_simulation(pMainData);
+            bs_main_redraw(pMainData,socket,pClientData);
+            sendframe();
+            
+            guac_protocol_send_blob(socket, pClientData->video_stream,
+                             "123", 2 /*length from end to start*/);
+            guac_socket_flush(socket);
+
+            gettimeofday(&stopTime, NULL);
+
+            usedTime  = (stopTime.tv_sec - startTime.tv_sec) * 1000;
+            usedTime += (stopTime.tv_usec - startTime.tv_usec) / 1000;
+
+            if(usedTime < 50)
+            {
+                usedTime = 50;
+            }
+
+            //pMainData->newTimerInterval = usedTime;
        
+        }
 
     }
 
@@ -400,42 +656,5 @@ int guac_client_init(guac_client *client)
     pClientData->current_idx = pClientData->nal_start = 0;
 
     
-
-    //////////////////////////////////////////
-    bs_main_data_t *pMainData;
-    BS_MEM_ALLOC_TYPE(pMainData, bs_main_data_t, 1);
-
-    bs_vector_t force;
-    int usedTime;
-    struct timeval startTime, stopTime;
-
-
-    pMainData->pListFactory = bs_list_factory_create();
-    pMainData->pCollective = bs_blob_collective_create(1.0f, 1.0f, pMainData->pListFactory);
-    //pMainData->pRubberband = bs_rubberband_create(2.5f, 3.0f);
-    pMainData->pEnv = bs_env_create(0.0f, 0.0f, 6.0f, 4.0f);
-    pMainData->pGravity = bs_vector_create(0.0f, 10.0f);
-    pMainData->pCairoSdl = bs_cairo_sdl_create(600, 400);
-    pMainData->width = 600.0;
-    pMainData->height = 400.0;
-    pMainData->newTimerInterval = 50;
-    pMainData->fps = 20.0;
-    pMainData->running = TRUE;
-
-    bs_profiler_init();
-
-    gettimeofday(&startTime, NULL);
-    pMainData->lastFrameTimeStamp = startTime.tv_sec * 1000 + startTime.tv_usec / 1000;
-
-
-    /* Start render thread for client level */
-    pthread_create(&pClientData->render_thread, NULL, video_render_thread, client);
-
-    //make the time-based callback
-
-
-
-
-
     return 0;
 }

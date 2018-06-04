@@ -24,6 +24,7 @@ libguac_client_video_la_SOURCES = src/videosender.c \
 				src/bs_ln_cairo.c
 
 
+#libguac_client_video_la_CFLAGS = `pkg-config --cflags --libs libavcodec`
 
 # libtool versioning information
-libguac_client_video_la_LDFLAGS = -version-info 0:0:0
+libguac_client_video_la_LDFLAGS = -version-info 0:0:0 `pkg-config --cflags --libs libavcodec`

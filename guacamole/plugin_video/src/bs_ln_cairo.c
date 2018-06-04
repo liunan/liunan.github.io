@@ -32,10 +32,11 @@ bs_ln_cairo_st_create(bs_int32_t width,
   }*/
 
   //we should create an image surface with self controlled img buffer
-  pCairoSurface = cairo_image_surface_create_for_data(NULL/* TODO: surface buffer ptr,pCairoSdl->pScreen->pixels*/, 
-    CAIRO_FORMAT_ARGB32, pCairoSdl->width, pCairoSdl->height, pCairoSdl->width * 4); 
+  pCairoSurface = cairo_image_surface_create(
+      CAIRO_FORMAT_RGB24, pCairoSdl->width, pCairoSdl->height); 
 
   //the surface created above is used for create a new cairo main object,and then destroy the cairo temp surface.
+  // the ownership of the pCairoSurface now belong to the pCairo object
   pCairoSdl->pCairo = cairo_create(pCairoSurface);
   cairo_surface_destroy(pCairoSurface);
   

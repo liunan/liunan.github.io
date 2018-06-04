@@ -36,6 +36,9 @@
 #include <libavutil/opt.h>
 #include <libavutil/imgutils.h>
 
+#include <libswscale/swscale.h>
+#include <libswscale/swscale.h>
+
 static void encode(AVCodecContext *enc_ctx, AVFrame *frame, AVPacket *pkt,
                    FILE *outfile)
 {
@@ -104,8 +107,8 @@ int main(int argc, char **argv)
     /* put sample parameters */
     c->bit_rate = 400000;
     /* resolution must be a multiple of two */
-    c->width = 352;
-    c->height = 288;
+    c->width = 400;
+    c->height = 300;
     /* frames per second */
     c->time_base = (AVRational){1, 25};
     c->framerate = (AVRational){25, 1};
@@ -119,6 +122,7 @@ int main(int argc, char **argv)
     c->gop_size = 10;
     c->max_b_frames = 1;
     c->pix_fmt = AV_PIX_FMT_YUV420P;
+    //c->pix_fmt = AV_PIX_FMT_RGB24;
 
     if (codec->id == AV_CODEC_ID_H264)
     {
@@ -155,8 +159,15 @@ int main(int argc, char **argv)
         exit(1);
     }
 
+
+    char* rgbBuf = (char*)malloc(c->width*c->height*3);
+    
+    struct SwsContext * ctx = sws_getCachedContext(ctx,c->width, c->height,
+                                  AV_PIX_FMT_RGB24, c->width, c->height,
+                                  AV_PIX_FMT_YUV420P, 0, 0, 0, 0);
+
     /* encode 1 second of video */
-    for (i = 0; i < 200; i++) {
+    for (i = 0; i < 25; i++) {
         fflush(stdout);
 
         /* make sure the frame data is writable */
@@ -164,27 +175,45 @@ int main(int argc, char **argv)
         if (ret < 0)
             exit(1);
 
+        /*prepare an rgb buffer*/
+        for(int r = 0;r<c->height;++r)
+        for(int col = 0;col<c->width;++col)
+        {
+            rgbBuf[r*(c->width*3)+col*3] = 255-i;
+        }
+
+
+        printf("ready to scale \n");
+        int inLinesize[1] = { 3*c->width }; // RGB stride
+        sws_scale(ctx, rgbBuf, inLinesize, 0, 
+                    c->height, frame->data, frame->linesize);
+
+        printf("scaled \n");
         /* prepare a dummy image */
         /* Y */
+        /*
         for (y = 0; y < c->height; y++) {
             for (x = 0; x < c->width; x++) {
                 frame->data[0][y * frame->linesize[0] + x] = x + y + i * 3;
             }
-        }
+        }*/
 
         /* Cb and Cr */
+        /*
         for (y = 0; y < c->height/2; y++) {
             for (x = 0; x < c->width/2; x++) {
                 frame->data[1][y * frame->linesize[1] + x] = 128 + y + i * 2;
                 frame->data[2][y * frame->linesize[2] + x] = 64 + x + i * 5;
             }
-        }
+        }*/
 
         frame->pts = i;
 
         /* encode the image */
         encode(c, frame, pkt, f);
     }
+
+    free(rgbBuf);
 
     /* flush the encoder */
     encode(c, NULL, pkt, f);

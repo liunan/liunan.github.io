@@ -17,7 +17,7 @@ bs_env_create(bs_float_t x,
   pEnv->top = y; 
   pEnv->bottom = y + h; 
   
-  pEnv->pOctree = bs_octree_create("maps/level1.txt"); 
+  pEnv->pOctree = bs_octree_create("/usr/local/lib/maps/level1.txt"); 
   
   return pEnv; 
 }
