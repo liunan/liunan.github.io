@@ -171,11 +171,14 @@ static void encode_example(const char *filename, int codec_id) {
     int height = 240;
     uint8_t *rgb = NULL;
     ffmpeg_encoder_start(filename, codec_id, 25, width, height);
+
+
     for (pts = 0; pts < 100; pts++) {
         frame->pts = pts;
         rgb = generate_rgb(width, height, pts, rgb);
         ffmpeg_encoder_encode_frame(rgb);
     }
+    
     ffmpeg_encoder_finish();
     free(rgb);
 }

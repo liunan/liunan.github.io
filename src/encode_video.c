@@ -37,7 +37,7 @@
 #include <libavutil/imgutils.h>
 
 #include <libswscale/swscale.h>
-#include <libswscale/swscale.h>
+
 
 static void encode(AVCodecContext *enc_ctx, AVFrame *frame, AVPacket *pkt,
                    FILE *outfile)
@@ -153,25 +153,29 @@ int main(int argc, char **argv)
     frame->width  = c->width;
     frame->height = c->height;
 
-    ret = av_frame_get_buffer(frame, 32);
+    ret = av_image_alloc(frame->data, frame->linesize, c->width, c->height, c->pix_fmt, 32);
     if (ret < 0) {
         fprintf(stderr, "Could not allocate the video frame data\n");
         exit(1);
     }
 
 
-    char* rgbBuf = (char*)malloc(c->width*c->height*3);
+    char* rgbBuf = (char*)malloc(c->width*c->height*4);
     
-    struct SwsContext * ctx = sws_getCachedContext(ctx,c->width, c->height,
-                                  AV_PIX_FMT_RGB24, c->width, c->height,
-                                  AV_PIX_FMT_YUV420P, 0, 0, 0, 0);
+    struct SwsContext * ctx = NULL;
+    ctx = sws_getCachedContext(ctx,
+                                    //c->width, c->height,AV_PIX_FMT_RGB24,
+                                    c->width,c->height,AV_PIX_FMT_RGB32_1,
+                                    c->width, c->height,AV_PIX_FMT_YUV420P,
+                                    0, 0, 0, 0);
 
+    printf("swscontext = %p\n",ctx);
     /* encode 1 second of video */
-    for (i = 0; i < 25; i++) {
+    for (i = 0; i < 255; i++) {
         fflush(stdout);
 
         /* make sure the frame data is writable */
-        ret = av_frame_make_writable(frame);
+        //ret = av_frame_make_writable(frame);
         if (ret < 0)
             exit(1);
 
@@ -179,13 +183,15 @@ int main(int argc, char **argv)
         for(int r = 0;r<c->height;++r)
         for(int col = 0;col<c->width;++col)
         {
-            rgbBuf[r*(c->width*3)+col*3] = 255-i;
+            rgbBuf[r*(c->width*4)+col*4] = 255-i;
+            rgbBuf[r*(c->width*4)+col*4+1] = i;
+            //rgbBuf[r*(c->width*3)+col*3+2] = i;
         }
 
 
         printf("ready to scale \n");
-        int inLinesize[1] = { 3*c->width }; // RGB stride
-        sws_scale(ctx, rgbBuf, inLinesize, 0, 
+        int inLinesize[1] = { 4*c->width }; // RGB stride
+        sws_scale(ctx, &rgbBuf, inLinesize, 0, 
                     c->height, frame->data, frame->linesize);
 
         printf("scaled \n");
