@@ -21,12 +21,12 @@
 
     <head>
         <link rel="stylesheet" type="text/css" href="guacamole.css"/>
-        <title>Guacamole (EXAMPLE)</title>
+        <title>Remote App Demo</title>
         <script src="Decoder.js"></script>
-        <script type="text/javascript" src="YUVCanvas.js"></script>
+        <script src="YUVCanvas.js"></script>
         <script src="Player.js"></script>
 
-        <script type="text/javascript" src="mp4.js"></script>
+        
     </head>
 
     <body>
@@ -68,24 +68,20 @@
                 var packetQueue = [];
 
 
-                 var plr = new Player({useWorker:false,size:{width:1024,height:768}});
+                var plr = new Player({useWorker:false,size:{width:1024,height:768}});
 
-                //var display = document.getElementById("videocontainer");
-                //var display = document.getElementById("display");
+                
 
                 var display = layer.getElement();
 
                 display.appendChild(plr.canvas);
 
 
+               /**
                
+               */
                reader.ondata = function playReceivedAudio(data) {
-                    console.log("ondata");
-
-
-                    var bufData = new Uint8Array(data); 
-                    //plr.decode(bufData);
-                    
+                    var bufData = new Uint8Array(data);                                     
                     setTimeout(function foo() {
                         plr.decode(bufData);
                     },1);
