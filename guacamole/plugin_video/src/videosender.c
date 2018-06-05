@@ -24,7 +24,7 @@ bs_main_clear(cairo_t *pCairo,
               double width,
               double height)
 {
-    cairo_set_source_rgb(pCairo, 1.0, 1.0, 1.0);
+    cairo_set_source_rgb(pCairo, .5, .5, .5);
 
     cairo_new_path(pCairo);
     cairo_move_to(pCairo, 0.0, 0.0);
@@ -167,15 +167,7 @@ static void encode(AVCodecContext *enc_ctx, AVFrame *frame, AVPacket *pkt, guac_
 {
     int ret;
 
-    /* send the frame to the encoder */
-    // if (frame)
-    //     printf("Send frame %3"PRId64"\n", frame->pts);
-
     ret = avcodec_send_frame(enc_ctx, frame);
-    // if (ret < 0) {
-    //     fprintf(stderr, "Error sending a frame for encoding\n");
-    //     exit(1);
-    // }
 
     guac_client *client = user->client;
     /* Get user-specific socket */
@@ -192,18 +184,17 @@ static void encode(AVCodecContext *enc_ctx, AVFrame *frame, AVPacket *pkt, guac_
             fprintf(stderr, "Error during encoding\n");
             exit(1);
         }
-
-        //printf("Write packet %3"PRId64" (size=%5d)\n", pkt->pts, pkt->size);
-        //fwrite(pkt->data, 1, pkt->size, outfile);
-        guac_protocol_send_blob(socket, client_data->video_stream,
-                                pkt->data, pkt->size /*length from end to start*/);
+        
+        guac_protocol_send_blob(socket,
+                                client_data->video_stream,
+                                pkt->data, pkt->size);
         guac_socket_flush(socket);
 
         av_packet_unref(pkt);
     }
 }
 
-//forward declation
+//forward declaration
 void *video_render_thread(void *arg);
 
 int video_join_handler(guac_user *user, int argc, char **argv)
@@ -332,7 +323,7 @@ void *video_render_thread(void *arg)
 
     if (codec->id == AV_CODEC_ID_H264)
     {
-        av_opt_set(c->priv_data, "preset", "slow", 0);
+        //av_opt_set(c->priv_data, "preset", "slow", 0);
         av_opt_set(c->priv_data, "profile", "baseline", 0);
     }
 
@@ -354,13 +345,7 @@ void *video_render_thread(void *arg)
     
     int usedTime;
     struct timeval startTime, stopTime;
-
-    int screenW, screenH;
-    screenW = 1024;
-    screenH = 768;
-
     
-
     //bs_profiler_init();
 
     gettimeofday(&startTime, NULL);
@@ -373,7 +358,7 @@ void *video_render_thread(void *arg)
                                c->width, c->height, AV_PIX_FMT_YUV420P,
                                0, 0, 0, 0);
 
-    int ret, x, y;
+    
     int i = 0;
     /* Update ball position as long as client is running */
     while (client->state == GUAC_CLIENT_RUNNING)
@@ -407,13 +392,13 @@ void *video_render_thread(void *arg)
 
             //bs_profiler_start(BS_PROFILER_TASK_DRAW);
 
-            //pCairo = bs_cairo_sdl_get_cairo(pMainData->pCairoSdl);
+            
 
             pCairo = pMainData->pCairoSdl->pCairo;
             cairo_surface_flush(cairo_get_target(pCairo));
 
             unsigned char *imgBuf = cairo_image_surface_get_data((cairo_get_target(pCairo)));
-            static int outted = 0;
+            
             if (imgBuf)
             {
 
@@ -429,12 +414,13 @@ void *video_render_thread(void *arg)
 
             usedTime = (stopTime.tv_sec - startTime.tv_sec) * 1000;
             usedTime += (stopTime.tv_usec - startTime.tv_usec) / 1000;
-
+            int sleepTime = 0;
             if (usedTime < 50)
             {
-                usedTime = 50;
+                sleepTime = 50-usedTime;
             }
-
+            if(sleepTime)
+                usleep(sleepTime*1000);
             //pMainData->newTimerInterval = usedTime;
         }
     }
