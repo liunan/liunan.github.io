@@ -74,9 +74,7 @@ bs_main_update_simulation(bs_main_data_t *pMainData)
     bs_blob_collective_move(pMainData->pCollective, 0.05);
     bs_blob_collective_sc(pMainData->pCollective, pMainData->pEnv);
     bs_blob_collective_set_force(pMainData->pCollective, pMainData->pGravity);
-
     
-
     //bs_profiler_stop(BS_PROFILER_TASK_SIMULATION);
 }
 
@@ -107,27 +105,25 @@ int key_handler(guac_user *user, int keysym, int pressed)
     bs_vector_t force;
     if (pressed)
     {
-        switch(keysym){
-        
-        
+        switch (keysym)
+        {
         case XK_Left:
             bs_vector_init(&force, -50.0, 0.0);
             bs_blob_collective_set_force(pMainData->pCollective, &force);
             break;
         case XK_Right:
-            bs_vector_init(&force,  50.0, 0.0);
+            bs_vector_init(&force, 50.0, 0.0);
             bs_blob_collective_set_force(pMainData->pCollective, &force);
             break;
         case XK_Up:
-            bs_vector_init(&force,  0.0, -50.0);
+            bs_vector_init(&force, 0.0, -50.0);
             bs_blob_collective_set_force(pMainData->pCollective, &force);
             break;
         case XK_Down:
-            bs_vector_init(&force,  0.0, 50.0);
+            bs_vector_init(&force, 0.0, 50.0);
             bs_blob_collective_set_force(pMainData->pCollective, &force);
             break;
-            
-                
+
         case XK_h:
             bs_blob_collective_split(pMainData->pCollective);
             break;
@@ -141,16 +137,15 @@ int key_handler(guac_user *user, int keysym, int pressed)
             bs_blob_collective_smaller_blobs(pMainData->pCollective);
             break;
         case XK_g:
-            if(bs_vector_get_y(pMainData->pGravity) > 0.0)
+            if (bs_vector_get_y(pMainData->pGravity) > 0.0)
             {
-              bs_vector_set_y(pMainData->pGravity, 0.0);
+                bs_vector_set_y(pMainData->pGravity, 0.0);
             }
             else
             {
-              bs_vector_set_y(pMainData->pGravity, 10.0);
+                bs_vector_set_y(pMainData->pGravity, 10.0);
             }
             break;
-                    
         }
     }
 
@@ -181,8 +176,8 @@ static void encode(AVCodecContext *enc_ctx, AVFrame *frame, AVPacket *pkt, guac_
             return;
         else if (ret < 0)
         {
-            fprintf(stderr, "Error during encoding\n");
-            exit(1);
+            fprintf(stderr, "Error during encoding\n");            
+            break;
         }
         
         guac_protocol_send_blob(socket,
@@ -247,27 +242,20 @@ int video_join_handler(guac_user *user, int argc, char **argv)
 
 int leave_handler(guac_user *user)
 {
+    video_client_data *data = (video_client_data *)user->client->data;
+    //TODO free user stream
+    guac_user_free_stream(user, data->video_stream);
     return 0;
 }
 
 int video_free_handler(guac_client *client)
 {
-
-    video_client_data *data = (video_client_data *)client->data;
+    video_client_data *data = (video_client_data *)client->data;    
 
     /* Wait for render thread to terminate */
     pthread_join(data->render_thread, NULL);
 
-    /* Free client-level ball layer */
-    guac_client_free_layer(client, data->video_lyr);
-
-    // free video buf data
-    free(data->video_buf);
-
-    //free the used stream
-    //TODO free user stream
-    //guac_user_free_stream(client->user, data->video_stream);
-
+    
     /* Free client-specific data */
     free(data);
 
@@ -302,7 +290,7 @@ void *video_render_thread(void *arg)
     pkt = av_packet_alloc();
 
     /* put sample parameters */
-    c->bit_rate = 20000000;
+    c->bit_rate = 10000000;
     /* resolution must be a multiple of two */
     //TODO: get width & height from client side
     c->width = 1024;
@@ -463,7 +451,7 @@ int guac_client_init(guac_client *client)
     /* Set up client data and handlers */
     client->data = pClientData;
     /* Allocate video layer at the client level */
-    pClientData->video_lyr = guac_client_alloc_layer(client);
+    
 
     
 

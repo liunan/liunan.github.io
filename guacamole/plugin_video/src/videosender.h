@@ -31,19 +31,11 @@ typedef struct bs_main_data_st
 
 typedef struct video_client_data {
 
-    guac_layer* video_lyr;
-
-    int current_idx;  
-    int nal_start;  
-    guac_stream* video_stream;
-    unsigned char* video_buf;
-    unsigned int video_buf_len;
+    guac_stream* video_stream;  
 
     bs_main_data_t* pMainData;
-
     
     pthread_t render_thread;
-
 } video_client_data;
 
 
