@@ -1,0 +1,103 @@
+
+// Defer playback of received audio packets slightly
+                reader.ondata = function playReceivedAudio(data) {
+                    var arrayData = new Int8Array( data );  
+                    console.log(mimetype + ' data received: ' + arrayData.length);
+
+                    //document.getElementById("player").setAttribute("src",arrayData);
+                    // test player usage
+                    var plr = new Player({useWorker:false,size:{width:1024,height:768}});
+
+                    //var display = document.getElementById("videocontainer");
+                    //var display = document.getElementById("display");
+
+                    var display = layer.getElement();
+
+                    display.appendChild(plr.canvas);
+
+                    
+
+                     var bufData = new Uint8Array(data);    
+                        
+                        var nalu_count = 0;
+                        var idx = 0;
+                        var nal_start = 0;
+                        
+
+                    //   var decoder = new Decoder({ rgb: false });
+
+                    //   decoder.onPictureDecoded = function (buffer, width, height, infos) {
+                    //     console.log(` ${nalu_count}: picture decoded ${width},${height}`);
+                    //   }
+
+                        function isNALU(type)
+                        {
+                          var result = null;
+                          switch(type)
+                          {
+                            case 0x65://I frame
+                              result="I";
+                              break;
+                            case 0x41://P frame
+                              result="P";
+                              break;
+                            case 0x67://SPS
+                              result ="SPS";
+                              break;
+                            case 0x68://PPS
+                              result="PPS";
+                              break;
+                            case 0x01://
+                              result = "NoIDR"
+                            //case 0xb7://end of stream                              
+                            //  result = "End";
+                              break;
+                          }
+                          return result;
+                        }
+                                               
+                        
+                        setTimeout(function foo() {
+
+                          while(idx<bufData.length-3)
+                          {
+                            //var value = bufData[idx] << 24 | bufData[idx+1]<< 16 | bufData[idx+2] << 8 | bufData[idx+3]
+                            var value = bufData[idx] << 16 | bufData[idx+1]<< 8 | bufData[idx+2];
+
+                            if(value == 1)
+                            {
+                              var type = bufData[idx+3];
+                              var nalu_type = isNALU(type);
+                              if(nalu_type!=null)
+                              {
+                                if(nal_start!=0)
+                                {
+                                  var nalu_end = idx + ( bufData[idx-1]==0?-1:0 );
+                                  var nalu = bufData.subarray(nal_start,nalu_end );//2 or 3 zero char
+                                  var current_type = isNALU(bufData[nal_start]);
+                                  ++nalu_count;
+                                  //console.log(`${nalu_count}:${nal_start}->${nalu_end} @ ${nalu_end-nal_start}  ${current_type}`);
+                                  //decoder.decode(nalu);
+
+                                  plr.decode(nalu);
+                                }
+
+                                idx+=3;
+                                nal_start = idx; 
+                                setTimeout(foo.bind(this), 1);
+                                break;                             
+                              }else
+                              {
+                                ++idx;
+                              }                            
+                            }
+                            else
+                            {
+                              idx++;
+                            }                                                   
+                          }
+
+                        }.bind(this),1);
+
+
+                }
