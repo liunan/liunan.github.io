@@ -24,6 +24,11 @@
 		
 	<script>
 	
+	var extent = Cesium.Rectangle.fromDegrees(75,60.808406,135.313421,20);
+
+	Cesium.Camera.DEFAULT_VIEW_RECTANGLE = extent;
+	Cesium.Camera.DEFAULT_VIEW_FACTOR = 0;
+
 	//Cesium.CreditDisplay.cesiumCredit = new Cesium.Credit('<a href="www.baidu.com" target="_blank"><img src="/images/cesium_logo.png" title="baidu"/></a>');
 	Cesium.CreditDisplay.cesiumCredit = null;
 		var viewer = new Cesium.Viewer('cesiumContainer', {
