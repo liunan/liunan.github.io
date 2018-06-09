@@ -774,7 +774,7 @@ function init() {
                     var coord_y = coordinates[1].toFixed(3);
 					
 					var hdms = ol.coordinate.toStringHDMS(ol.proj.transform(
-            coordinates, 'EPSG:3857', 'EPSG:4326'));
+            coordinates, 'EPSG:3857', 'EPSG:4326'),2);//保留两位小数
 					return hdms;            
                 },
                 target: 'coordinates'

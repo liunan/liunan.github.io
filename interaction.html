@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="zh">
+
+<head>
+    <meta charset="GBK">
+    <title>交互事件</title>
+    <script src="js/Mouse.js"></script>
+    <script src="js/Keyboard.js"></script>
+
+
+
+</head>
+
+<body>
+
+    <div id="myDisplay" style="width:640px;height:480px;border:solid">
+
+    </div>
+
+
+    <script>
+
+        /*
+            document.onmousedown = function(event){
+                console.log(`doc.mouseDown ${event.button}`);
+            }
+            document.onmousemove = (event)=>{
+                console.log(`doc.mousemove ${event.x} ,${event.y}`);
+            }
+        
+            document.onkeypress = (event) =>{
+                console.log(`doc.onkeypress ${event.key}`);
+        
+                event.preventDefault();
+            }
+            document.onkeydown = document.onkeyup = (event)=>{
+                event.preventDefault();
+            }
+        */
+        var element = document.getElementById("myDisplay");
+        var mouse = new Guacamole.Mouse(element);
+
+        mouse.onmousedown =
+            mouse.onmousemove =
+            mouse.onmouseup = function (state) {
+
+                // Do something with the mouse state received ...
+                console.log(`mouse event (${state.x},${state.y}),  L(${state.left}),M(${state.middle},R(${state.right},U(${state.up},D(${state.down}) `);
+
+            };
+
+        var keyboard = new Guacamole.Keyboard(document);
+
+        keyboard.onkeydown = function (keysym) {
+            // Do something ...
+            console.log(`key down ${keysym}`);
+        };
+
+        keyboard.onkeyup = function (keysym) {
+            // Do something ...
+            console.log(`key up ${keysym}`);
+        };
+
+    </script>
+</body>
+
+</html>
