@@ -1,0 +1,14 @@
+1 使用guacamole common-js中的mouse 和keyboard模块捕获窗口中的鼠标、键盘事件，并通过后续的通信管道将用户输入推至*后台*程序；
+2 监听websocket中的视频内容推送，目前暂时直接推'rgba'像素矩阵
+    2.1 通过2d canvas 直接将像素矩阵贴到canvas中输出；
+    2.2 通过webGL将像素矩阵贴出
+
+    该项有分支，可能后续会使用h264的视频编码流作为传输载体
+
+3 定义前、后端的通信消息内容
+    onSize  窗口绘制区大小重置
+    onMouse 鼠标
+    onKey   键盘
+    onJoin/onLeave  连接开始，结束
+    onInit      初始化
+    onFinish    客户端断开
